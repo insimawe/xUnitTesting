@@ -1,5 +1,7 @@
-﻿using FluentAssertions;
+﻿using FakeItEasy;
+using FluentAssertions;
 using FluentAssertions.Extensions;
+using NetworkUtility.DNS;
 using NetworkUtility.Ping;
 using System;
 using System.Collections.Generic;
@@ -13,20 +15,25 @@ namespace NetworkUtility.Test.PingTests
 {
     public class NetworkServiceTests
     {
-        public readonly NetworkService _pingService;
+        private readonly NetworkService _pingService;
+        private readonly IDNS _iDns;
 
         //Constructor - cto
         public NetworkServiceTests()
-        {
+        {  
+            //Depedencies
+            _iDns = A.Fake<IDNS>();
+
             //SUT
-            _pingService = new NetworkService();
+            _pingService = new NetworkService(_iDns);
+          
         }
 
         [Fact]
         public void NetworkService_SendPing_ReturnString()
         {
             //Arrange
-            
+            A.CallTo(() => _iDns.SendDNS()).Returns(true); //Mocking - this is the way to allow access to sendDNS method
 
             //Act
             var result = _pingService.SendPing();
@@ -84,6 +91,25 @@ namespace NetworkUtility.Test.PingTests
             result.Should().BeOfType<PingOptions>();
             result.Should().BeEquivalentTo(expected);
             result.Ttl.Should().Be(1);
+        }
+
+        [Fact]
+        public void NetworkService_MostRecentPings_ReturnCollection()
+        {
+            //Arrange
+            var expected = new PingOptions()
+            {
+                DontFragment = true,
+                Ttl = 1
+            };
+
+            //Act
+            var result = _pingService.MostRecentPings();
+
+            //Assert
+            //result.Should().BeOfType<IEnumerable<PingOptions>>();
+            result.Should().ContainEquivalentOf(expected);
+            result.Should().Contain(x => x.DontFragment == true);
         }
 
     }
